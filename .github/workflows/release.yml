@@ -1,9 +1,6 @@
 name: Build and Release Image
 
 on:
-  push:
-    tags:
-      - "[0-9]+.[0-9]+.[0-9]+" # Trigger on semantic version tags
   workflow_dispatch:
     inputs:
       tag:
@@ -18,7 +15,6 @@ on:
           - jammy
 env:
   PACKER_LOG: 1
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -76,7 +72,7 @@ jobs:
           name: built-images
           path: |
             echo "DEBUG: Uploading artifacts."
-            output-${{ github.event.inputs.ubuntu_codename }}/nodadyoushutup-cloud-image-${{ github.event.inputs.ubuntu_codename }}.img
+            output-${{ github.event.inputs.ubuntu_codename }}/nodadyoushutup_cloud_image_${{ github.event.inputs.ubuntu_codename }}.img
             echo "DEBUG: Artifact uploaded."
 
   release:
@@ -97,13 +93,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Creating release for tag: ${{ github.event.inputs.tag }}"
-          gh release create ${{ github.event.inputs.tag }} --title "${{ github.event.inputs.tag }}" --notes "Automated release of the cloud images."
+          gh release create ${{ github.event.inputs.tag }} --title "${{ github.event.inputs.tag }}" --notes "Automated release of the cloud image"
 
       - name: Upload artifact to release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ARTIFACT_PATH=$(ls output/nodadyoushutup-cloud-image-${{ github.event.inputs.ubuntu_codename }}.img | head -n 1)
+          ARTIFACT_PATH=$(ls output/nodadyoushutup_cloud_image_${{ github.event.inputs.ubuntu_codename }}.img | head -n 1)
           if [[ -z "$ARTIFACT_PATH" ]]; then
             echo "No artifact found to upload."
             exit 1

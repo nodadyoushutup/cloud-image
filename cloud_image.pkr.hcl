@@ -30,15 +30,15 @@ source "qemu" "ubuntu" {
   iso_checksum     = "file:https://cloud-images.ubuntu.com/${var.ubuntu_codename}/current/SHA256SUMS"
   iso_url          = "https://cloud-images.ubuntu.com/${var.ubuntu_codename}/current/${var.ubuntu_codename}-server-cloudimg-amd64.img"
   output_directory = "output"
+  qemuargs         = [
+    ["-m", "2048M"],
+    ["-smp", "2"],
+    ["-serial", "mon:stdio"]
+  ]
   shutdown_command = "echo 'packer' | sudo -S shutdown -P now"
   ssh_password     = "ubuntu"
   ssh_username     = "ubuntu"
-  vm_name          = "nodadyoushutup-cloud-image-${var.ubuntu_codename}.img"
-  qemuargs = [
-    ["-m", "2048M"],
-    ["-smp", "2"],
-    ["-serial", "mon:stdio"],
-  ]
+  vm_name          = "nodadyoushutup_cloud_image_${var.ubuntu_codename}.img"
 }
 
 build {
@@ -54,12 +54,5 @@ build {
       "./script/install/docker.sh",
       "./script/cleanup.sh"
     ]
-  }
-  post-processor "manifest" {
-    output     = "packer_manifest.json"
-    strip_path = true
-    custom_data = {
-      version_fingerprint = packer.versionFingerprint
-    }
   }
 }
