@@ -7,8 +7,15 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Semantic version tag for the release (e.g., 1.0.0)."
+        description: "Semantic version tag for the release"
         required: true
+      ubuntu_codename:
+        description: "Select the Ubuntu codename version"
+        required: true
+        default: "jammy"
+        type: choice
+        options:
+          - jammy
 env:
   PACKER_LOG: 1
 
@@ -57,16 +64,10 @@ jobs:
           packer init cloud_image.pkr.hcl
           echo "DEBUG: Packer initialized."
 
-      - name: Packer build focal
+      - name: Packer build
         run: |
           echo "DEBUG: Starting packer build for tag $TAG."
-          packer build -var "build_type=remote" -var "ubuntu_version=focal" cloud_image.pkr.hcl
-          echo "DEBUG: Packer build completed."
-
-      - name: Packer build jammy
-        run: |
-          echo "DEBUG: Starting packer build for tag $TAG."
-          packer build -var "build_type=remote" -var "ubuntu_version=jammy" cloud_image.pkr.hcl
+          packer build -var "build_type=remote" -var "ubuntu_codename=${{ github.event.inputs.ubuntu_codename }}" cloud_image.pkr.hcl
           echo "DEBUG: Packer build completed."
 
       - name: Upload artifacts to workspace
@@ -75,9 +76,8 @@ jobs:
           name: built-images
           path: |
             echo "DEBUG: Uploading artifacts."
-            output-focal/nodadyoushutup-cloud-image-focal.img
-            output-jammy/nodadyoushutup-cloud-image-jammy.img
-            echo "DEBUG: Artifacts uploaded."
+            output-${{ github.event.inputs.ubuntu_codename }}/nodadyoushutup-cloud-image-${{ github.event.inputs.ubuntu_codename }}.img
+            echo "DEBUG: Artifact uploaded."
 
   release:
     needs: build
@@ -99,21 +99,14 @@ jobs:
           echo "Creating release for tag: ${{ github.event.inputs.tag }}"
           gh release create ${{ github.event.inputs.tag }} --title "${{ github.event.inputs.tag }}" --notes "Automated release of the cloud images."
 
-      - name: Upload artifacts to release
+      - name: Upload artifact to release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          FOCAL_ARTIFACT_PATH=$(ls nodadyoushutup-cloud-image-focal.img | head -n 1)
-          JAMMY_ARTIFACT_PATH=$(ls nodadyoushutup-cloud-image-jammy.img | head -n 1)
-          if [[ -z "$FOCAL_ARTIFACT_PATH" ]]; then
-            echo "No focal artifact found to upload."
+          ARTIFACT_PATH=$(ls nodadyoushutup-cloud-image-${{ github.event.inputs.ubuntu_codename }}.img | head -n 1)
+          if [[ -z "$ARTIFACT_PATH" ]]; then
+            echo "No artifact found to upload."
             exit 1
           fi
-          if [[ -z "$JAMMY_ARTIFACT_PATH" ]]; then
-            echo "No jammy artifact found to upload."
-            exit 1
-          fi
-          echo "Uploading focal artifact: $FOCAL_ARTIFACT_PATH"
-          gh release upload "${{ github.event.inputs.tag }}" "$FOCAL_ARTIFACT_PATH"
-          echo "Uploading jammy artifact: $JAMMY_ARTIFACT_PATH"
-          gh release upload "${{ github.event.inputs.tag }}" "$JAMMY_ARTIFACT_PATH"
+          echo "Uploading artifact: $ARTIFACT_PATH"
+          gh release upload "${{ github.event.inputs.tag }}" "$ARTIFACT_PATH"

@@ -13,9 +13,9 @@ variable "build_type" {
   description = "Build local or remote"
 }
 
-variable "ubuntu_version" {
+variable "ubuntu_codename" {
   type        = string
-  default     = "focal"
+  default     = "jammy"
   description = "Ubuntu codename version"
 }
 
@@ -27,13 +27,13 @@ source "qemu" "ubuntu" {
   disk_image       = true
   disk_size        = "10G"
   headless         = true
-  iso_checksum     = "file:https://cloud-images.ubuntu.com/${var.ubuntu_version}/current/SHA256SUMS"
-  iso_url          = "https://cloud-images.ubuntu.com/${var.ubuntu_version}/current/${var.ubuntu_version}-server-cloudimg-amd64.img"
-  output_directory = "output-${var.ubuntu_version}"
+  iso_checksum     = "file:https://cloud-images.ubuntu.com/${var.ubuntu_codename}/current/SHA256SUMS"
+  iso_url          = "https://cloud-images.ubuntu.com/${var.ubuntu_codename}/current/${var.ubuntu_codename}-server-cloudimg-amd64.img"
+  output_directory = "output-${var.ubuntu_codename}"
   shutdown_command = "echo 'packer' | sudo -S shutdown -P now"
   ssh_password     = "ubuntu"
   ssh_username     = "ubuntu"
-  vm_name          = "nodadyoushutup-cloud-image-${var.ubuntu_version}.img"
+  vm_name          = "nodadyoushutup-cloud-image-${var.ubuntu_codename}.img"
   qemuargs = [
     ["-m", "2048M"],
     ["-smp", "2"],
