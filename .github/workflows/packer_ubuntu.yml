@@ -1,0 +1,119 @@
+name: Build and Release Images
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+" # Trigger on semantic version tags
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Semantic version tag for the release (e.g., 1.0.0)."
+        required: true
+env:
+  PACKER_LOG: 1
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install packages
+        run: |
+          sudo apt-get update && sudo apt-get install -y qemu-system xorriso jq
+          echo "DEBUG: Installed required packages."
+
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@main
+        id: setup
+        with:
+          version: "latest"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate tag
+        id: validate_tag
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          if [[ ! "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Invalid tag format. Use semantic versioning (e.g., 1.0.0)."
+            exit 1
+          fi
+          echo "DEBUG: Tag format is valid."
+          git fetch --tags
+          if git tag --list | grep -q "^${TAG}$"; then
+            echo "Error: Tag $TAG already exists. Please use a unique version tag."
+            exit 1
+          fi
+          echo "Validated tag: $TAG"
+
+      - name: Packer init
+        run: |
+          echo "DEBUG: Initializing packer..."
+          packer init cloud_image.pkr.hcl
+          echo "DEBUG: Packer initialized."
+
+      - name: Packer build focal
+        run: |
+          echo "DEBUG: Starting packer build for tag $TAG."
+          packer build -var "build_type=remote" -var "ubuntu_version=focal" cloud_image.pkr.hcl
+          echo "DEBUG: Packer build completed."
+
+      - name: Packer build jammy
+        run: |
+          echo "DEBUG: Starting packer build for tag $TAG."
+          packer build -var "build_type=remote" -var "ubuntu_version=jammy" cloud_image.pkr.hcl
+          echo "DEBUG: Packer build completed."
+
+      - name: Upload artifacts to workspace
+        uses: actions/upload-artifact@v3
+        with:
+          name: built-images
+          path: |
+            echo "DEBUG: Uploading artifacts."
+            output-focal/nodadyoushutup-cloud-image-focal.img
+            output-jammy/nodadyoushutup-cloud-image-jammy.img
+            echo "DEBUG: Artifacts uploaded."
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: built-images
+
+      - name: Create GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Creating release for tag: ${{ github.event.inputs.tag }}"
+          gh release create ${{ github.event.inputs.tag }} --title "${{ github.event.inputs.tag }}" --notes "Automated release of the cloud images."
+
+      - name: Upload artifacts to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          FOCAL_ARTIFACT_PATH=$(ls nodadyoushutup-cloud-image-focal.img | head -n 1)
+          JAMMY_ARTIFACT_PATH=$(ls nodadyoushutup-cloud-image-jammy.img | head -n 1)
+          if [[ -z "$FOCAL_ARTIFACT_PATH" ]]; then
+            echo "No focal artifact found to upload."
+            exit 1
+          fi
+          if [[ -z "$JAMMY_ARTIFACT_PATH" ]]; then
+            echo "No jammy artifact found to upload."
+            exit 1
+          fi
+          echo "Uploading focal artifact: $FOCAL_ARTIFACT_PATH"
+          gh release upload "${{ github.event.inputs.tag }}" "$FOCAL_ARTIFACT_PATH"
+          echo "Uploading jammy artifact: $JAMMY_ARTIFACT_PATH"
+          gh release upload "${{ github.event.inputs.tag }}" "$JAMMY_ARTIFACT_PATH"
