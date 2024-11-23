@@ -55,15 +55,18 @@ source "qemu" "ubuntu" {
 
 build {
   sources = ["source.qemu.ubuntu"]
+  provisioner "file" {
+    source      = "./script/logging.sh"
+    destination = "/tmp/logging.sh"
+  }
   provisioner "shell" {
     execute_command = "echo 'packer' | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
-    environment_vars = [
-      "DEBIAN_FRONTEND=noninteractive"
-    ]
+    environment_vars = ["DEBIAN_FRONTEND=noninteractive"]
     scripts = [
       "./script/cloud-init.sh",
       "./script/install/apt.sh",
       "./script/install/docker.sh",
+      "./script/install/act.sh",
       "./script/cleanup.sh"
     ]
   }

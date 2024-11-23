@@ -1,12 +1,12 @@
 #!/bin/bash -eu
 
-echo "==> Updating apt cache"
-sudo apt-get update -qq
-
-echo "==> Upgrading apt packages"
-sudo apt-get upgrade -y -qq
-
-echo "==> Installing apt packages"
+source /tmp/logging.sh
+log_info "Starting apt update, upgrade, and package installation..."
+log_info "Updating apt cache..."
+sudo apt-get update -qq || log_error "Failed to update apt cache."
+log_info "Upgrading apt packages..."
+sudo apt-get upgrade -y -qq || log_error "Failed to upgrade apt packages."
+log_info "Installing apt packages..."
 sudo apt-get install -y -qq \
     age \
     curl \
@@ -38,4 +38,5 @@ sudo apt-get install -y -qq \
     wget \
     whois \
     xorriso \
-    zip
+    zip || log_error "Failed to install one or more apt packages."
+log_info "All tasks completed successfully!"

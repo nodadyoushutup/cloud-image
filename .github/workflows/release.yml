@@ -24,6 +24,8 @@ on:
       
 env:
   PACKER_LOG: 1
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
