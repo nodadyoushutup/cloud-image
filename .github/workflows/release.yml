@@ -72,7 +72,7 @@ jobs:
           name: built-images
           path: |
             echo "DEBUG: Uploading artifacts."
-            output-${{ github.event.inputs.ubuntu_codename }}/nodadyoushutup_cloud_image_${{ github.event.inputs.ubuntu_codename }}.img
+            output/nodadyoushutup_cloud_image_${{ github.event.inputs.ubuntu_codename }}.img
             echo "DEBUG: Artifact uploaded."
 
   release:
