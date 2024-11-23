@@ -19,6 +19,18 @@ variable "ubuntu_codename" {
   description = "Ubuntu codename version"
 }
 
+variable "output_dir" {
+  type        = string
+  default     = "output"
+  description = "Output directory"
+}
+
+variable "file_name_root" {
+  type        = string
+  default     = "nodadyoushutup_cloud_image"
+  description = "File name root"
+}
+
 source "qemu" "ubuntu" {
   accelerator      = var.build_type == "local" ? "kvm" : "none"
   cd_files         = ["./cloud-init/*"]
@@ -29,7 +41,7 @@ source "qemu" "ubuntu" {
   headless         = true
   iso_checksum     = "file:https://cloud-images.ubuntu.com/${var.ubuntu_codename}/current/SHA256SUMS"
   iso_url          = "https://cloud-images.ubuntu.com/${var.ubuntu_codename}/current/${var.ubuntu_codename}-server-cloudimg-amd64.img"
-  output_directory = "output"
+  output_directory = var.output_dir
   qemuargs         = [
     ["-m", "2048M"],
     ["-smp", "2"],
@@ -38,7 +50,7 @@ source "qemu" "ubuntu" {
   shutdown_command = "echo 'packer' | sudo -S shutdown -P now"
   ssh_password     = "ubuntu"
   ssh_username     = "ubuntu"
-  vm_name          = "nodadyoushutup_cloud_image_${var.ubuntu_codename}.img"
+  vm_name          = "${var.file_name_root}_${var.ubuntu_codename}.img"
 }
 
 build {

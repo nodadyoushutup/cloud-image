@@ -13,6 +13,15 @@ on:
         type: choice
         options:
           - jammy
+      output_dir:
+        description: "Output directory"
+        required: true
+        default: "output"
+      file_name_root:
+        description: "File name"
+        required: true
+        default: "nodadyoushutup_cloud_image"
+      
 env:
   PACKER_LOG: 1
 jobs:
@@ -63,7 +72,12 @@ jobs:
       - name: Packer build
         run: |
           echo "DEBUG: Starting packer build for tag $TAG."
-          packer build -var "build_type=remote" -var "ubuntu_codename=${{ github.event.inputs.ubuntu_codename }}" cloud_image.pkr.hcl
+          packer build \
+          -var "build_type=remote" \
+          -var "ubuntu_codename=${{ github.event.inputs.ubuntu_codename }}" \
+          -var "output_dir=${{ github.event.inputs.output_dir }}" \
+          -var "file_name_root=${{ github.event.inputs.file_name_root }}" \
+          cloud_image.pkr.hcl
           echo "DEBUG: Packer build completed."
 
       - name: Upload artifacts to workspace
@@ -72,7 +86,7 @@ jobs:
           name: built-images
           path: |
             echo "DEBUG: Uploading artifacts."
-            output/nodadyoushutup_cloud_image_${{ github.event.inputs.ubuntu_codename }}.img
+            ${{ github.event.inputs.output_dir }}/${{ github.event.inputs.file_name_root }}_${{ github.event.inputs.ubuntu_codename }}.img
             echo "DEBUG: Artifact uploaded."
 
   release:
@@ -99,7 +113,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ARTIFACT_PATH=$(ls output/nodadyoushutup_cloud_image_${{ github.event.inputs.ubuntu_codename }}.img | head -n 1)
+          ARTIFACT_PATH=$(ls ${{ github.event.inputs.output_dir }}/${{ github.event.inputs.file_name_root }}_${{ github.event.inputs.ubuntu_codename }}.img | head -n 1)
           if [[ -z "$ARTIFACT_PATH" ]]; then
             echo "No artifact found to upload."
             exit 1
