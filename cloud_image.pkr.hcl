@@ -8,8 +8,8 @@ packer {
 }
 
 variable "accelerator" {
-  type        = string
-  default     = "none"
+  type = string
+  default = "none"
   description = "QEMU accelerator"
 }
 
@@ -50,7 +50,7 @@ source "qemu" "ubuntu" {
 build {
   sources = ["source.qemu.ubuntu"]
   provisioner "file" {
-    source      = "./script/logger.sh"
+    source = "./script/logger.sh"
     destination = "/tmp/logger.sh"
   }
   provisioner "shell" {
