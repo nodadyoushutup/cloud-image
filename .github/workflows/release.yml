@@ -54,7 +54,7 @@ jobs:
       - name: Install packages
         run: |
           echo "DEBUG: Installing packages..."
-          sudo apt-get update && sudo apt-get install -y qemu-system xorriso jq sha256sum
+          sudo apt-get update && sudo apt-get install -y qemu-system xorriso jq
           echo "DEBUG: Installed required packages."
 
       - name: Setup Packer
