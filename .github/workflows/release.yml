@@ -28,11 +28,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - name: Validate semantic version tag
         id: validate_tag
         run: |
@@ -50,6 +45,11 @@ jobs:
             exit 1
           fi
           echo "INFO: Validated tag $VERSION"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install packages
         run: |
