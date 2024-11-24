@@ -48,7 +48,7 @@ jobs:
         id: validate_tag
         run: |
           if git rev-parse "refs/tags/${VERSION}" >/dev/null 2>&1; then
-            echo "Error: Tag ${VERSION} already exists. Please use a unique version tag."
+            echo "Error: Tag ${VERSION} already exists"
             exit 1
           fi
 
