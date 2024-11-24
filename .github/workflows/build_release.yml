@@ -47,8 +47,8 @@ jobs:
       - name: Validate tag uniqueness
         id: validate_tag
         run: |
-          if git rev-parse "refs/tags/${VERSION}" >/dev/null 2>&1; then
-            echo "Error: Tag ${VERSION} already exists"
+          if git rev-parse "refs/tags/${{ env.VERSION }}" >/dev/null 2>&1; then
+            echo "Error: Tag ${{ env.VERSION }} already exists"
             exit 1
           fi
 
@@ -77,15 +77,15 @@ jobs:
         id: packer_build
         run: |
           packer build \
-          -var="output_dir=${OUTPUT_DIR}" \
-          -var="file_name=${FILE_NAME}" \
+          -var="output_dir=${{ env.OUTPUT_DIR }}" \
+          -var="file_name=${{ env.FILE_NAME }}" \
           cloud_image.pkr.hcl
 
       - name: Generate checksum
         id: generate_checksum
         run: |
-          mkdir -p "${OUTPUT_DIR}"
-          sha256sum "${OUTPUT_DIR}/${FILE_NAME}.img" > "${OUTPUT_DIR}/${FILE_NAME}.img.sha256"
+          mkdir -p "${{ env.OUTPUT_DIR }}"
+          sha256sum "${{ env.OUTPUT_DIR }}/${{ env.FILE_NAME }}.img" > "${{ env.OUTPUT_DIR }}/${{ env.FILE_NAME }}.img.sha256"
 
       - name: Upload artifacts to workspace
         uses: actions/upload-artifact@v4
@@ -93,8 +93,8 @@ jobs:
         with:
           name: artifact
           path: |
-            "${OUTPUT_DIR}/${FILE_NAME}.img"
-            "${OUTPUT_DIR}/${FILE_NAME}.img.sha256"
+            ${{ env.OUTPUT_DIR }}/${{ env.FILE_NAME }}.img
+            ${{ env.OUTPUT_DIR }}/${{ env.FILE_NAME }}.img.sha256
 
   release:
     needs: build
@@ -113,25 +113,25 @@ jobs:
       - name: Create GitHub release
         id: release_create
         run: |
-          echo "Creating release for tag: ${VERSION}"
-          gh release create ${VERSION} --title "${VERSION}" --notes "Automated release of the cloud image"
+          echo "Creating release for tag: ${{ env.VERSION }}"
+          gh release create ${{ env.VERSION }} --title "${{ env.VERSION }}" --notes "Automated release of the cloud image"
 
       - name: Upload artifact to release
         id: release_upload_artifact
         run: |
-          if [[ ! -f "${OUTPUT_DIR}/${FILE_NAME}.img" ]]; then
-            echo "Error: Artifact not found: "${OUTPUT_DIR}/${FILE_NAME}.img"
+          if [[ ! -f "${{ env.OUTPUT_DIR }}/${{ env.FILE_NAME }}.img" ]]; then
+            echo "Error: Artifact not found: ${{ env.OUTPUT_DIR }}/${{ env.FILE_NAME }}.img"
             exit 1
           fi
-          echo "Uploading artifact: "${OUTPUT_DIR}/${FILE_NAME}.img"
-          gh release upload "{$VERSION}" "${OUTPUT_DIR}/${FILE_NAME}.img"
+          echo "Uploading artifact: ${{ env.OUTPUT_DIR }}/${{ env.FILE_NAME }}.img"
+          gh release upload "${{ env.VERSION }}" "${{ env.OUTPUT_DIR }}/${{ env.FILE_NAME }}.img"
       
       - name: Upload checksum to release
         id: release_upload_checksum
         run: |
-          if [[ ! -f "${OUTPUT_DIR}/${FILE_NAME}.img.sha256" ]]; then
-            echo "Error: Checksum file not found: "${OUTPUT_DIR}/${FILE_NAME}.img.sha256"
+          if [[ ! -f "${{ env.OUTPUT_DIR }}/${{ env.FILE_NAME }}.img.sha256" ]]; then
+            echo "Error: Checksum file not found: ${{ env.OUTPUT_DIR }}/${{ env.FILE_NAME }}.img.sha256"
             exit 1
           fi
-          echo "Uploading checksum: "${OUTPUT_DIR}/${FILE_NAME}.img.sha256"
-          gh release upload "{$VERSION}" "${OUTPUT_DIR}/${FILE_NAME}.img.sha256"
+          echo "Uploading checksum: ${{ env.OUTPUT_DIR }}/${{ env.FILE_NAME }}.img.sha256"
+          gh release upload "${{ env.VERSION }}" "${{ env.OUTPUT_DIR }}/${{ env.FILE_NAME }}.img.sha256"
