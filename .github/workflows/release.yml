@@ -1,6 +1,9 @@
 name: Build and Release Image
 
 on:
+  push:
+    tags:
+      - "*"
   workflow_dispatch:
     inputs:
       version:
@@ -16,10 +19,14 @@ on:
       file_name_root:
         description: "File name"
         required: true
-        default: "nodadyoushutup_cloud_image"
-      
+        default: "cloud_image_x86_64"
+        type: choice
+        options:
+          - "cloud_image_x86_64"
+
 env:
   PACKER_LOG: 1
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 permissions:
   contents: write
@@ -28,23 +35,30 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Determine version
+        id: determine_version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          elif [ "${{ github.event_name }}" == "push" ]; then
+            TAG_REF=${{ github.ref }}
+            VERSION=$(echo "${TAG_REF}" | sed 's/refs\/tags\///')
+            if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "Error: Tag $VERSION - Invalid semantic version format."
+              exit 1
+            fi
+            echo "VERSION=$VERSION" >> $GITHUB_ENV
+          fi
+          echo "Determined version: $VERSION"
+
       - name: Validate semantic version tag
-        id: validate_tag
         run: |
           echo "INFO: Validating tag"
-          VERSION="${{ github.event.inputs.version }}"
           if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Error: $VERSION - Invalid tag format. Use semantic versioning (e.g., 1.0.0)."
             exit 1
           fi
           echo "INFO: Tag format is valid"
-          echo "INFO: Fetching existing tags"
-          git fetch --tags
-          if git rev-parse "refs/tags/$VERSION" >/dev/null 2>&1; then
-            echo "Error: Tag $VERSION already exists. Please use a unique version tag."
-            exit 1
-          fi
-          echo "INFO: Validated tag $VERSION"
 
       - name: Checkout repository
         uses: actions/checkout@v4

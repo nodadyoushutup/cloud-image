@@ -15,7 +15,7 @@ variable "ubuntu_codename" {
 
 variable "file_name_root" {
   type        = string
-  default     = "nodadyoushutup_cloud_image"
+  default     = "cloud_image_x86_64"
   description = "File name root"
 }
 
