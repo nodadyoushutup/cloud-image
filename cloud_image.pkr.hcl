@@ -7,12 +7,6 @@ packer {
   }
 }
 
-variable "ubuntu_codename" {
-  type        = string
-  default     = "jammy"
-  description = "Ubuntu codename version"
-}
-
 variable "accelerator" {
   type        = string
   default     = "none"
@@ -27,8 +21,8 @@ source "qemu" "ubuntu" {
   disk_image = true
   disk_size = "10G"
   headless = true
-  iso_checksum = "file:https://cloud-images.ubuntu.com/${var.ubuntu_codename}/current/SHA256SUMS"
-  iso_url = "https://cloud-images.ubuntu.com/${var.ubuntu_codename}/current/${var.ubuntu_codename}-server-cloudimg-amd64.img"
+  iso_checksum = "file:https://cloud-images.ubuntu.com/jammy/current/SHA256SUMS"
+  iso_url = "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
   output_directory = "output"
   qemuargs = [
     ["-m", "2048M"],
@@ -38,7 +32,7 @@ source "qemu" "ubuntu" {
   shutdown_command = "echo 'packer' | sudo -S shutdown -P now"
   ssh_password = "ubuntu"
   ssh_username = "ubuntu"
-  vm_name = "cloud_image_x86_64_${var.ubuntu_codename}.img"
+  vm_name = "cloud_image_x86_64_jammy.img"
 }
 
 build {
