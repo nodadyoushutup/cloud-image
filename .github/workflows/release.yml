@@ -43,7 +43,7 @@ jobs:
             exit 1
           fi
           echo "DEBUG: Tag format is valid."
-          echo "DEBUG: Fetching existing tags.
+          echo "DEBUG: Fetching existing tags.""
           git fetch --tags
           if git rev-parse "refs/tags/$VERSION" >/dev/null 2>&1; then
             echo "Error: Tag $VERSION already exists. Please use a unique version tag."
