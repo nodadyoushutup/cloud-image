@@ -61,7 +61,7 @@ jobs:
           sha256sum output/cloud_image_x86_64_jammy.img > $CHECKSUM_FILE
 
       - name: Upload artifacts to workspace
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         id: artifact_upload
         with:
           name: artifact
@@ -80,7 +80,7 @@ jobs:
 
       - name: Download artifacts
         id: artifact_download
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: artifact
 
