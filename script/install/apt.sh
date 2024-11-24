@@ -1,6 +1,6 @@
 #!/bin/bash -eu
 
-source /tmp/logging.sh
+source /tmp/logger.sh
 log_info "Starting apt update, upgrade, and package installation..."
 log_info "Updating apt cache..."
 sudo apt-get update -qq || log_error "Failed to update apt cache."

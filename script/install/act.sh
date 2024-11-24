@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/bin/bash -eu
 
-source /tmp/logging.sh
+source /tmp/logger.sh
 VERSION="v0.2.69"
 ARCH="Linux_x86_64"
 URL="https://github.com/nektos/act/releases/download/${VERSION}/act_${ARCH}.tar.gz"

@@ -3,7 +3,7 @@ name: Build and Release Image
 on:
   workflow_dispatch:
     inputs:
-      tag:
+      version:
         description: "Semantic version tag for the release"
         required: true
       ubuntu_codename:
@@ -13,10 +13,6 @@ on:
         type: choice
         options:
           - jammy
-      output_dir:
-        description: "Output directory"
-        required: true
-        default: "output"
       file_name_root:
         description: "File name"
         required: true
@@ -24,16 +20,41 @@ on:
       
 env:
   PACKER_LOG: 1
+
 permissions:
   contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate tag
+        id: validate_tag
+        run: |
+          if [[ ! "${{ github.event.inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: ${{ github.event.inputs.version }} - Invalid tag format. Use semantic versioning (e.g., 1.0.0)."
+            exit 1
+          fi
+          echo "DEBUG: Tag format is valid."
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+          git config --global credential.helper store
+          echo "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com" > ~/.git-credentials
+          git fetch --tags
+          if git tag --list | grep -q "^${{ github.event.inputs.version }}$"; then
+            echo "Error: Tag ${{ github.event.inputs.version }} already exists. Please use a unique version tag."
+            exit 1
+          fi
+          echo "Validated tag: ${{ github.event.inputs.version }}"
+
       - name: Install packages
         run: |
-          sudo apt-get update && sudo apt-get install -y qemu-system xorriso jq
+          echo "DEBUG: Installing packages..."
+          sudo apt-get update && sudo apt-get install -y qemu-system xorriso jq sha256sum
           echo "DEBUG: Installed required packages."
 
       - name: Setup Packer
@@ -42,28 +63,11 @@ jobs:
         with:
           version: "latest"
 
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Validate tag
-        id: validate_tag
+      - name: Packer validate
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            TAG="${{ github.event.inputs.tag }}"
-          else
-            TAG="${GITHUB_REF#refs/tags/}"
-          fi
-          if [[ ! "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Error: Invalid tag format. Use semantic versioning (e.g., 1.0.0)."
-            exit 1
-          fi
-          echo "DEBUG: Tag format is valid."
-          git fetch --tags
-          if git tag --list | grep -q "^${TAG}$"; then
-            echo "Error: Tag $TAG already exists. Please use a unique version tag."
-            exit 1
-          fi
-          echo "Validated tag: $TAG"
+          echo "DEBUG: Validating packer file."
+          packer validate cloud_image.pkr.hcl
+          echo "DEBUG: Packer file validation completed."
 
       - name: Packer init
         run: |
@@ -73,23 +77,28 @@ jobs:
 
       - name: Packer build
         run: |
-          echo "DEBUG: Starting packer build for tag $TAG."
+          echo "DEBUG: Starting packer build for tag ${{ github.event.inputs.version }}."
           packer build \
-          -var "build_type=remote" \
           -var "ubuntu_codename=${{ github.event.inputs.ubuntu_codename }}" \
-          -var "output_dir=${{ github.event.inputs.output_dir }}" \
           -var "file_name_root=${{ github.event.inputs.file_name_root }}" \
           cloud_image.pkr.hcl
           echo "DEBUG: Packer build completed."
 
+      - name: Generate checksum
+        run: |
+          echo "DEBUG: Generating checksum for built image."
+          mkdir -p output
+          CHECKSUM_FILE=output/${{ github.event.inputs.file_name_root }}_${{ github.event.inputs.ubuntu_codename }}.img.sha256
+          sha256sum output/${{ github.event.inputs.file_name_root }}_${{ github.event.inputs.ubuntu_codename }}.img > $CHECKSUM_FILE
+          echo "DEBUG: Checksum generated at $CHECKSUM_FILE."
+
       - name: Upload artifacts to workspace
         uses: actions/upload-artifact@v3
         with:
-          name: built-images
+          name: artifacts
           path: |
-            echo "DEBUG: Uploading artifacts."
-            ${{ github.event.inputs.output_dir }}/${{ github.event.inputs.file_name_root }}_${{ github.event.inputs.ubuntu_codename }}.img
-            echo "DEBUG: Artifact uploaded."
+            output/${{ github.event.inputs.file_name_root }}_${{ github.event.inputs.ubuntu_codename }}.img
+            output/${{ github.event.inputs.file_name_root }}_${{ github.event.inputs.ubuntu_codename }}.img.sha256
 
   release:
     needs: build
@@ -102,23 +111,29 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
-          name: built-images
+          name: artifacts
 
       - name: Create GitHub release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Creating release for tag: ${{ github.event.inputs.tag }}"
-          gh release create ${{ github.event.inputs.tag }} --title "${{ github.event.inputs.tag }}" --notes "Automated release of the cloud image"
+          echo "Creating release for tag: ${{ github.event.inputs.version }}"
+          gh release create ${{ github.event.inputs.version }} --title "${{ github.event.inputs.version }}" --notes "Automated release of the cloud image"
 
       - name: Upload artifact to release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ARTIFACT_PATH=$(ls ${{ github.event.inputs.output_dir }}/${{ github.event.inputs.file_name_root }}_${{ github.event.inputs.ubuntu_codename }}.img | head -n 1)
-          if [[ -z "$ARTIFACT_PATH" ]]; then
-            echo "No artifact found to upload."
+          ARTIFACT_PATH=output/${{ github.event.inputs.file_name_root }}_${{ github.event.inputs.ubuntu_codename }}.img
+          if [[ ! -f "$ARTIFACT_PATH" ]]; then
+            echo "Error: Artifact not found: $ARTIFACT_PATH"
             exit 1
           fi
           echo "Uploading artifact: $ARTIFACT_PATH"
-          gh release upload "${{ github.event.inputs.tag }}" "$ARTIFACT_PATH"
+          gh release upload "${{ github.event.inputs.version }}" "$ARTIFACT_PATH"
+      
+      - name: Upload checksum to release
+        run: |
+          CHECKSUM_FILE=output/${{ github.event.inputs.file_name_root }}_${{ github.event.inputs.ubuntu_codename }}.img.sha256
+          if [[ ! -f "$CHECKSUM_FILE" ]]; then
+            echo "Error: Checksum file not found: $CHECKSUM_FILE"
+            exit 1
+          fi
+          echo "Uploading checksum: $CHECKSUM_FILE"
+          gh release upload "${{ github.event.inputs.version }}" "$CHECKSUM_FILE"

@@ -1,6 +1,6 @@
 #!/bin/bash -eu
 
-source /tmp/logging.sh
+source /tmp/logger.sh
 log_info "Starting Docker CE installation..."
 log_info "Updating package lists and installing prerequisites..."
 sudo apt-get update -qq || log_error "Failed to update package lists."

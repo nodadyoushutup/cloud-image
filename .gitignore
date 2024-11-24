@@ -1,14 +1,7 @@
-# Cache objects
 packer_cache/
-
-# Crash log
+output/
 crash.log
-
-# https://www.packer.io/guides/hcl/variables
 *.pkrvars.hcl
-
-# For built boxes
 *.box
-
-# Build image files
 *.img
+*.convert
