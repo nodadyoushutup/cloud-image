@@ -13,12 +13,6 @@ variable "ubuntu_codename" {
   description = "Ubuntu codename version"
 }
 
-variable "file_name_root" {
-  type        = string
-  default     = "cloud_image_x86_64"
-  description = "File name root"
-}
-
 variable "accelerator" {
   type        = string
   default     = "none"
@@ -44,7 +38,7 @@ source "qemu" "ubuntu" {
   shutdown_command = "echo 'packer' | sudo -S shutdown -P now"
   ssh_password = "ubuntu"
   ssh_username = "ubuntu"
-  vm_name = "${var.file_name_root}_${var.ubuntu_codename}.img"
+  vm_name = "cloud_image_x86_64_${var.ubuntu_codename}.img"
 }
 
 build {

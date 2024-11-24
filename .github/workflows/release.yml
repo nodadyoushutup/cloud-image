@@ -10,19 +10,12 @@ on:
         description: "Semantic version tag for the release"
         required: true
       ubuntu_codename:
-        description: "Select the Ubuntu codename version"
+        description: "Ubuntu codename version"
         required: true
         default: "jammy"
         type: choice
         options:
           - jammy
-      file_name_root:
-        description: "File name"
-        required: true
-        default: "cloud_image_x86_64"
-        type: choice
-        options:
-          - "cloud_image_x86_64"
 
 env:
   PACKER_LOG: 1
@@ -87,22 +80,21 @@ jobs:
         run: |
           packer build \
           -var "ubuntu_codename=${{ github.event.inputs.ubuntu_codename }}" \
-          -var "file_name_root=${{ github.event.inputs.file_name_root }}" \
           cloud_image.pkr.hcl
 
       - name: Generate checksum
         run: |
           mkdir -p output
-          CHECKSUM_FILE=output/${{ github.event.inputs.file_name_root }}_${{ github.event.inputs.ubuntu_codename }}.img.sha256
-          sha256sum output/${{ github.event.inputs.file_name_root }}_${{ github.event.inputs.ubuntu_codename }}.img > $CHECKSUM_FILE
+          CHECKSUM_FILE=output/cloud_image_x86_64_${{ github.event.inputs.ubuntu_codename }}.img.sha256
+          sha256sum output/cloud_image_x86_64_${{ github.event.inputs.ubuntu_codename }}.img > $CHECKSUM_FILE
 
       - name: Upload artifacts to workspace
         uses: actions/upload-artifact@v3
         with:
           name: artifacts
           path: |
-            output/${{ github.event.inputs.file_name_root }}_${{ github.event.inputs.ubuntu_codename }}.img
-            output/${{ github.event.inputs.file_name_root }}_${{ github.event.inputs.ubuntu_codename }}.img.sha256
+            output/cloud_image_x86_64_${{ github.event.inputs.ubuntu_codename }}.img
+            output/cloud_image_x86_64_${{ github.event.inputs.ubuntu_codename }}.img.sha256
 
   release:
     needs: build
