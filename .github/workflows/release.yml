@@ -61,13 +61,13 @@ jobs:
         with:
           version: "latest"
 
-      - name: Packer validate
-        run: |
-          packer validate cloud_image.pkr.hcl
-
       - name: Packer init
         run: |
           packer init cloud_image.pkr.hcl
+
+      - name: Packer validate
+        run: |
+          packer validate cloud_image.pkr.hcl
 
       - name: Packer build
         run: |
