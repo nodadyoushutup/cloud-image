@@ -124,7 +124,7 @@ jobs:
             exit 1
           fi
           echo "Uploading artifact: "${OUTPUT_DIR}/${FILE_NAME}.img"
-          gh release upload "$VERSION" "${OUTPUT_DIR}/${FILE_NAME}.img"
+          gh release upload "{$VERSION}" "${OUTPUT_DIR}/${FILE_NAME}.img"
       
       - name: Upload checksum to release
         id: release_upload_checksum
@@ -134,4 +134,4 @@ jobs:
             exit 1
           fi
           echo "Uploading checksum: "${OUTPUT_DIR}/${FILE_NAME}.img.sha256"
-          gh release upload "$VERSION" "${OUTPUT_DIR}/${FILE_NAME}.img.sha256"
+          gh release upload "{$VERSION}" "${OUTPUT_DIR}/${FILE_NAME}.img.sha256"
