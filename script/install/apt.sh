@@ -17,8 +17,8 @@ sudo apt-get install -y -qq \
     iptables \
     jq \
     lsof \
-    mysql-client-core-8.0 \
     make \
+    mysql-client-core-8.0 \
     nano \
     net-tools \
     nfs-common \

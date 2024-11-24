@@ -1,7 +1,9 @@
 #!/bin/bash -eu
 
-echo "==> Waiting for cloud-init to finish"
+source /tmp/logger.sh
+log_info "Checking if Cloud-Init has completed..."
 while [ ! -f /var/lib/cloud/instance/boot-finished ]; do
-    echo 'Waiting for Cloud-Init...'
+    log_info "Waiting for Cloud-Init to finish..."
     sleep 1
 done
+log_info "Cloud-Init has completed successfully!"
