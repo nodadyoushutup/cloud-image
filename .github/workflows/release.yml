@@ -36,26 +36,24 @@ jobs:
       - name: Validate semantic version tag
         id: validate_tag
         run: |
-          echo "DEBUG: Validating tag"
+          echo "INFO: Validating tag"
           VERSION="${{ github.event.inputs.version }}"
           if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Error: $VERSION - Invalid tag format. Use semantic versioning (e.g., 1.0.0)."
             exit 1
           fi
-          echo "DEBUG: Tag format is valid."
-          echo "DEBUG: Fetching existing tags.""
+          echo "INFO: Tag format is valid"
+          echo "INFO: Fetching existing tags"
           git fetch --tags
           if git rev-parse "refs/tags/$VERSION" >/dev/null 2>&1; then
             echo "Error: Tag $VERSION already exists. Please use a unique version tag."
             exit 1
           fi
-          echo "Validated tag: $VERSION"
+          echo "INFO: Validated tag $VERSION"
 
       - name: Install packages
         run: |
-          echo "DEBUG: Installing packages..."
           sudo apt-get update && sudo apt-get install -y qemu-system xorriso jq
-          echo "DEBUG: Installed required packages."
 
       - name: Setup Packer
         uses: hashicorp/setup-packer@main
@@ -65,32 +63,24 @@ jobs:
 
       - name: Packer validate
         run: |
-          echo "DEBUG: Validating packer file."
           packer validate cloud_image.pkr.hcl
-          echo "DEBUG: Packer file validation completed."
 
       - name: Packer init
         run: |
-          echo "DEBUG: Initializing packer..."
           packer init cloud_image.pkr.hcl
-          echo "DEBUG: Packer initialized."
 
       - name: Packer build
         run: |
-          echo "DEBUG: Starting packer build for tag ${{ github.event.inputs.version }}."
           packer build \
           -var "ubuntu_codename=${{ github.event.inputs.ubuntu_codename }}" \
           -var "file_name_root=${{ github.event.inputs.file_name_root }}" \
           cloud_image.pkr.hcl
-          echo "DEBUG: Packer build completed."
 
       - name: Generate checksum
         run: |
-          echo "DEBUG: Generating checksum for built image."
           mkdir -p output
           CHECKSUM_FILE=output/${{ github.event.inputs.file_name_root }}_${{ github.event.inputs.ubuntu_codename }}.img.sha256
           sha256sum output/${{ github.event.inputs.file_name_root }}_${{ github.event.inputs.ubuntu_codename }}.img > $CHECKSUM_FILE
-          echo "DEBUG: Checksum generated at $CHECKSUM_FILE."
 
       - name: Upload artifacts to workspace
         uses: actions/upload-artifact@v3
