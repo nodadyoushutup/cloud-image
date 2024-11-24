@@ -9,10 +9,27 @@ on:
       version:
         description: "Semantic version tag for the release"
         required: true
+      output_dir:
+        description: "Output directory"
+        required: true
+        default: output
+        type: choice
+        options:
+          - output
+      file_name:
+        description: "File name"
+        required: true
+        default: cloud_image_x86_64_jammy
+        type: choice
+        options:
+          - cloud_image_x86_64_jammy
 
 env:
   PACKER_LOG: 1
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  VERSION: "${{ github.ref_name || github.event.inputs.version }}"
+  OUTPUT_DIR: ${{ github.event.inputs.output_dir }}
+  FILE_NAME: ${{ github.event.inputs.file_name }}
 
 permissions:
   contents: write
@@ -30,16 +47,15 @@ jobs:
       - name: Validate tag uniqueness
         id: validate_tag
         run: |
-          VERSION="${{ github.ref_name || github.event.inputs.version }}"
-          if git rev-parse "refs/tags/$VERSION" >/dev/null 2>&1; then
-            echo "Error: Tag $VERSION already exists. Please use a unique version tag."
+          if git rev-parse "refs/tags/${VERSION}" >/dev/null 2>&1; then
+            echo "Error: Tag ${VERSION} already exists. Please use a unique version tag."
             exit 1
           fi
 
       - name: Install packages
         id: apt_install
         run: |
-          sudo apt-get update && sudo apt-get install -y qemu-system xorriso jq
+          sudo apt-get update && sudo apt-get install -y jq qemu-system xorriso
 
       - name: Packer setup
         uses: hashicorp/setup-packer@main
@@ -60,14 +76,16 @@ jobs:
       - name: Packer build
         id: packer_build
         run: |
-          packer build cloud_image.pkr.hcl
+          packer build \
+          -var="output_dir=${OUTPUT_DIR}" \
+          -var="file_name=${FILE_NAME}" \
+          cloud_image.pkr.hcl
 
       - name: Generate checksum
         id: generate_checksum
         run: |
-          mkdir -p output
-          CHECKSUM_FILE=output/cloud_image_x86_64_jammy.img.sha256
-          sha256sum output/cloud_image_x86_64_jammy.img > $CHECKSUM_FILE
+          mkdir -p "${OUTPUT_DIR}"
+          sha256sum "${OUTPUT_DIR}/${FILE_NAME}.img" > "${OUTPUT_DIR}/${FILE_NAME}.img.sha256"
 
       - name: Upload artifacts to workspace
         uses: actions/upload-artifact@v4
@@ -75,8 +93,8 @@ jobs:
         with:
           name: artifact
           path: |
-            output/cloud_image_x86_64_jammy.img
-            output/cloud_image_x86_64_jammy.img.sha256
+            "${OUTPUT_DIR}/${FILE_NAME}.img"
+            "${OUTPUT_DIR}/${FILE_NAME}.img.sha256"
 
   release:
     needs: build
@@ -96,27 +114,25 @@ jobs:
       - name: Create GitHub release
         id: release_create
         run: |
-          echo "Creating release for tag: ${{ github.event.inputs.version }}"
-          gh release create ${{ github.event.inputs.version }} --title "${{ github.event.inputs.version }}" --notes "Automated release of the cloud image"
+          echo "Creating release for tag: ${VERSION}"
+          gh release create ${VERSION} --title "${VERSION}" --notes "Automated release of the cloud image"
 
       - name: Upload artifact to release
         id: release_upload_artifact
         run: |
-          ARTIFACT_PATH=output/cloud_image_x86_64_jammy.img
-          if [[ ! -f "$ARTIFACT_PATH" ]]; then
-            echo "Error: Artifact not found: $ARTIFACT_PATH"
+          if [[ ! -f "${OUTPUT_DIR}/${FILE_NAME}.img" ]]; then
+            echo "Error: Artifact not found: "${OUTPUT_DIR}/${FILE_NAME}.img"
             exit 1
           fi
-          echo "Uploading artifact: $ARTIFACT_PATH"
-          gh release upload "${{ github.event.inputs.version }}" "$ARTIFACT_PATH"
+          echo "Uploading artifact: "${OUTPUT_DIR}/${FILE_NAME}.img"
+          gh release upload "$VERSION" "${OUTPUT_DIR}/${FILE_NAME}.img"
       
       - name: Upload checksum to release
         id: release_upload_checksum
         run: |
-          CHECKSUM_FILE=output/cloud_image_x86_64_jammy.img.sha256
-          if [[ ! -f "$CHECKSUM_FILE" ]]; then
-            echo "Error: Checksum file not found: $CHECKSUM_FILE"
+          if [[ ! -f "${OUTPUT_DIR}/${FILE_NAME}.img.sha256" ]]; then
+            echo "Error: Checksum file not found: "${OUTPUT_DIR}/${FILE_NAME}.img.sha256"
             exit 1
           fi
-          echo "Uploading checksum: $CHECKSUM_FILE"
-          gh release upload "${{ github.event.inputs.version }}" "$CHECKSUM_FILE"
+          echo "Uploading checksum: "${OUTPUT_DIR}/${FILE_NAME}.img.sha256"
+          gh release upload "$VERSION" "${OUTPUT_DIR}/${FILE_NAME}.img.sha256"

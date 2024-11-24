@@ -13,6 +13,18 @@ variable "accelerator" {
   description = "QEMU accelerator"
 }
 
+variable "output_dir" {
+  type = string
+  default = "output"
+  description = "Output directory"
+}
+
+variable "file_name" {
+  type = string
+  default = "cloud_image_x86_64_jammy"
+  description = "File name"
+}
+
 source "qemu" "ubuntu" {
   accelerator = var.accelerator
   cd_files = ["./cloud-init/*"]
@@ -23,7 +35,7 @@ source "qemu" "ubuntu" {
   headless = true
   iso_checksum = "file:https://cloud-images.ubuntu.com/jammy/current/SHA256SUMS"
   iso_url = "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
-  output_directory = "output"
+  output_directory = var.output_dir
   qemuargs = [
     ["-m", "2048M"],
     ["-smp", "2"],
@@ -32,7 +44,7 @@ source "qemu" "ubuntu" {
   shutdown_command = "echo 'packer' | sudo -S shutdown -P now"
   ssh_password = "ubuntu"
   ssh_username = "ubuntu"
-  vm_name = "cloud_image_x86_64_jammy.img"
+  vm_name = "${var.file_name}.img"
 }
 
 build {
